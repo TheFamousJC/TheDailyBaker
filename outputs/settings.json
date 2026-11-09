@@ -1,36 +1,214 @@
 {
   "feeds": [
-    "https://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://www.theguardian.com/world/rss",
-    "https://www.france24.com/en/rss"
+    {
+      "channel": "BBC News / BBC Parliament",
+      "publisher": "BBC",
+      "site": "bbc.com",
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml"
+    },
+    {
+      "channel": "CNN International / CNN Domestic",
+      "publisher": "CNN",
+      "site": "cnn.com"
+    },
+    {
+      "channel": "Reuters TV / Live Video",
+      "publisher": "Reuters",
+      "site": "reuters.com"
+    },
+    {
+      "channel": "Sky News / Sky News UK",
+      "publisher": "Sky News",
+      "site": "news.sky.com",
+      "url": "https://feeds.skynews.com/feeds/rss/world.xml"
+    },
+    {
+      "channel": "DW News",
+      "publisher": "DW",
+      "site": "dw.com"
+    },
+    {
+      "channel": "France 24",
+      "publisher": "France 24",
+      "site": "france24.com",
+      "url": "https://www.france24.com/en/rss"
+    },
+    {
+      "channel": "Euronews",
+      "publisher": "Euronews",
+      "site": "euronews.com"
+    },
+    {
+      "channel": "Bloomberg Television",
+      "publisher": "Bloomberg",
+      "site": "bloomberg.com"
+    },
+    {
+      "channel": "CNBC / CNBC World",
+      "publisher": "CNBC",
+      "site": "cnbc.com"
+    },
+    {
+      "channel": "NHK World-Japan",
+      "publisher": "NHK",
+      "site": "www3.nhk.or.jp/nhkworld"
+    },
+    {
+      "channel": "CNA",
+      "publisher": "CNA",
+      "site": "channelnewsasia.com"
+    },
+    {
+      "channel": "CGTN",
+      "publisher": "CGTN",
+      "site": "cgtn.com"
+    },
+    {
+      "channel": "WION",
+      "publisher": "WION",
+      "site": "wionews.com"
+    },
+    {
+      "channel": "TRT World",
+      "publisher": "TRT World",
+      "site": "trtworld.com"
+    },
+    {
+      "channel": "Fox News Channel",
+      "publisher": "Fox",
+      "site": "foxnews.com"
+    },
+    {
+      "channel": "Fox Business Network",
+      "publisher": "Fox",
+      "site": "foxbusiness.com"
+    },
+    {
+      "channel": "MSNBC / MS NOW",
+      "publisher": "MS NOW",
+      "site": "ms.now"
+    },
+    {
+      "channel": "ABC News Live",
+      "publisher": "ABC News",
+      "site": "abcnews.go.com"
+    },
+    {
+      "channel": "CBS News 24/7",
+      "publisher": "CBS News",
+      "site": "cbsnews.com",
+      "url": "https://www.cbsnews.com/latest/rss/main"
+    },
+    {
+      "channel": "NBC News NOW",
+      "publisher": "NBC News",
+      "site": "nbcnews.com"
+    },
+    {
+      "channel": "NewsNation",
+      "publisher": "NewsNation",
+      "site": "newsnationnow.com"
+    },
+    {
+      "channel": "C-SPAN",
+      "publisher": "C-SPAN",
+      "site": "c-span.org"
+    },
+    {
+      "channel": "Voice of America",
+      "publisher": "VOA",
+      "site": "voanews.com"
+    },
+    {
+      "channel": "CBC News Network",
+      "publisher": "CBC / Radio-Canada",
+      "site": "cbc.ca",
+      "url": "https://www.cbc.ca/webfeed/rss/rss-topstories"
+    },
+    {
+      "channel": "ICI RDI",
+      "publisher": "CBC / Radio-Canada",
+      "site": "ici.radio-canada.ca"
+    },
+    {
+      "channel": "CTV News Channel",
+      "publisher": "Bell Media",
+      "site": "ctvnews.ca"
+    },
+    {
+      "channel": "CP24",
+      "publisher": "Bell Media",
+      "site": "cp24.com"
+    },
+    {
+      "channel": "GB News",
+      "publisher": "GB News",
+      "site": "gbnews.com"
+    },
+    {
+      "channel": "TalkTV",
+      "publisher": "TalkTV",
+      "site": "talk.tv"
+    }
   ],
   "topics": [
     {
       "name": "Congestion pricing",
       "match": "\\b(congestion pricing|congestion charge|congestion toll)\\b",
       "sides": [
-        ["Supporters", "\\b(reduces? traffic|less traffic|cuts? congestion|funds? transit|fund public transit)\\b"],
-        ["Critics", "\\b(burdens? drivers|hurts? commuters|costly for commuters|unfair to drivers|extra cost for drivers)\\b"]
+        [
+          "Supporters",
+          "\\b(reduces? traffic|less traffic|cuts? congestion|funds? transit|fund public transit)\\b"
+        ],
+        [
+          "Critics",
+          "\\b(burdens? drivers|hurts? commuters|costly for commuters|unfair to drivers|extra cost for drivers)\\b"
+        ]
       ],
       "jokes": [
-        ["Finally, a rush hour with fewer cars.", "Finally, a rush hour with a cover charge."],
-        ["The traffic jam needed an exit.", "My budget needed one too."],
-        ["I'd pay for a shorter commute.", "I already paid for the commute."]
-      ]
+        [
+          "Finally, a rush hour with fewer cars.",
+          "Finally, a rush hour with a cover charge."
+        ],
+        [
+          "The traffic jam needed an exit.",
+          "My budget needed one too."
+        ],
+        [
+          "I'd pay for a shorter commute.",
+          "I already paid for the commute."
+        ]
+      ],
+      "solution": "Pilot peak-hour tolls, fund transit, and offer income-based discounts."
     },
     {
       "name": "Nuclear power",
       "match": "\\b(nuclear power|nuclear energy|nuclear reactors?)\\b",
       "sides": [
-        ["Supporters", "\\b(low.carbon|clean energy|reliable power|energy security)\\b"],
-        ["Critics", "\\b(radioactive waste|cost overruns|safety concerns|expensive to build)\\b"]
+        [
+          "Supporters",
+          "\\b(low.carbon|clean energy|reliable power|energy security)\\b"
+        ],
+        [
+          "Critics",
+          "\\b(radioactive waste|cost overruns|safety concerns|expensive to build)\\b"
+        ]
       ],
       "jokes": [
-        ["The grid asked for a steady relationship.", "The budget asked to see other options."],
-        ["A power plant that works the night shift.", "A project that bills for overtime."],
-        ["Put reliability on the agenda.", "Put the invoice on it too."]
-      ]
+        [
+          "The grid asked for a steady relationship.",
+          "The budget asked to see other options."
+        ],
+        [
+          "A power plant that works the night shift.",
+          "A project that bills for overtime."
+        ],
+        [
+          "Put reliability on the agenda.",
+          "Put the invoice on it too."
+        ]
+      ],
+      "solution": "Tie project funding to cost milestones and a funded waste plan."
     }
   ]
 }

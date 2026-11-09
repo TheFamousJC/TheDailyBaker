@@ -1,5 +1,6 @@
 """The Daily Baker: collect, draft, review, and export editorial satire."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
@@ -9,7 +10,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
@@ -34,7 +35,22 @@ class PlainText(HTMLParser):
 
 def collect(feeds):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
-    for feed in feeds:
+    with ThreadPoolExecutor(max_workers=8) as workers:
+        for articles in workers.map(lambda source: list(collect_source(source, cutoff)), feeds):
+            yield from articles
+
+
+def collect_source(source, cutoff):
+    # Keep existing string-based feed configurations usable.
+    if isinstance(source, str):
+        source = {"url": source, "publisher": urlsplit(source).hostname}
+    site = source.get("site")
+    direct = source.get("url")
+    fallback = "https://news.google.com/rss/search?" + urlencode({
+        "q": f"site:{site} when:2d", "hl": "en", "gl": "US", "ceid": "US:en",
+    })
+    for feed in filter(None, (direct, fallback if site else None)):
+        accepted = 0
         try:
             with urlopen(Request(feed, headers={"User-Agent": "TheDailyBaker/1.0"}), timeout=12) as response:
                 raw = response.read(2_000_001)
@@ -54,14 +70,34 @@ def collect(feeds):
                     continue
                 if not cutoff <= published <= datetime.now(timezone.utc) or not host or urlsplit(link).scheme != "https":
                     continue
+                title = str(PlainText(item.findtext("title") or ""))
+                summary = str(PlainText(item.findtext("description") or ""))
+                if feed != direct:
+                    attribution = item.find("source")
+                    if attribution is None:
+                        continue
+                    origin = urlsplit(attribution.get("url", "")).hostname or ""
+                    domain = site.split("/")[0]
+                    if origin != domain and not origin.endswith("." + domain):
+                        continue
+                    label = (attribution.text or "").strip()
+                    if label and title.endswith(f" - {label}"):
+                        title = title[:-(len(label) + 3)]
+                    summary = ""
+                if not title:
+                    continue
+                accepted += 1
                 yield {
-                    "publisher": urlsplit(feed).hostname,
+                    "publisher": source["publisher"],
+                    "channel": source.get("channel", source["publisher"]),
                     "url": link,
-                    "title": str(PlainText(item.findtext("title") or "")),
-                    "summary": str(PlainText(item.findtext("description") or "")),
+                    "title": title,
+                    "summary": summary,
                 }
         except (OSError, ValueError, ElementTree.ParseError) as error:
             print(f"Feed unavailable ({feed}): {error}")
+        if accepted:
+            return
 
 
 def select(articles, topics):
@@ -85,7 +121,7 @@ def select(articles, topics):
     return max(candidates, key=lambda candidate: candidate[0], default=None)
 
 
-def render(topic, sides, jokes, index, path):
+def render(topic, sides, jokes, index, path, sources, solution):
     palettes = [
         ("#132527", "#aee9c5", "#f9ce87"),
         ("#242238", "#c8bbff", "#ffb9ce"),
@@ -110,10 +146,15 @@ def render(topic, sides, jokes, index, path):
     centered("THE DAILY BAKER   /   EDITORIAL SATIRE", 125, 33, 970)
     centered(topic, 266, 84, 960)
     for x, color, side, joke in zip((60, 550), (left, right), sides, jokes):
-        draw.rounded_rectangle((x, 408, x + 470, 915), radius=30, fill=color)
+        draw.rounded_rectangle((x, 408, x + 470, 765), radius=30, fill=color)
         centered(side, 485, 34, 410, x + 235, background)
-        centered(joke, 674, 54, 398, x + 235, background)
-    centered("Satirical captions", 1000, 28, 970)
+        centered(joke, 624, 54, 398, x + 235, background)
+    if solution:
+        draw.rounded_rectangle((60, 789, 1020, 956), radius=26, fill="#ffffff")
+        centered("PROPOSED SOLUTION  /  THE DAILY BAKER", 831, 25, 900, color=background)
+        centered(solution, 899, 36, 880, color=background)
+    credits = "  /  ".join(source.get("channel", source["publisher"]) for source in sources)
+    centered("Source coverage: " + credits, 995, 25, 960)
     image.save(path)
 
 
@@ -135,11 +176,13 @@ def dashboard(db, state):
             title = escape(source["title"])
             if source["url"]:
                 title = f'<a href="{escape(source["url"], quote=True)}">{title}</a>'
-            sources.append(f'<li><b>{escape(label)}</b> · {escape(source["publisher"])} · {title}<p>{escape(source["summary"])}</p></li>')
+            sources.append(f'<li><b>{escape(label)}</b> · {escape(source.get("channel", source["publisher"]))} · {title}<p>{escape(source["summary"])}</p></li>')
+        solution = data.get("solution")
+        solution_html = f'<p><b>Proposed solution</b> · {escape(solution)}</p>' if solution else ""
         mode = " · demo" if data["demo"] else ""
         sections.append(f'<article><img src="{identifier}.png" alt="{escape(data["alt"], quote=True)}">'
                         f'<div><h2>{escape(data["topic"])}</h2><code>{identifier}</code> · {status}{mode}'
-                        f'<ul>{"".join(sources)}</ul><p>{escape(data["caption"])}</p></div></article>')
+                        f'<ul>{"".join(sources)}</ul><p>{escape(data["caption"])}</p>{solution_html}</div></article>')
     page = ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
             '<title>The Daily Baker</title><style>body{font:17px system-ui;background:#f4efe7;color:#20282a;max-width:1050px;'
             'margin:50px auto;padding:0 20px}article{display:flex;flex-wrap:wrap;gap:26px;background:white;padding:22px;'
@@ -158,15 +201,18 @@ def generate(db, state, settings, is_demo):
     _, topic, sources = result
     name = topic["name"]
     sides = [label for label, _ in topic["sides"]]
+    solution = topic.get("solution", "")
     for index, jokes in enumerate(topic["jokes"]):
-        data = {"topic": name, "sides": sides, "sources": sources, "demo": is_demo,
+        data = {"topic": name, "sides": sides, "sources": sources, "demo": is_demo, "solution": solution,
                 "caption": f"Editorial satire | {name} — {sides[0]} and {sides[1]}.",
                 "alt": f"Two panels on {name}. " + " ".join(f"{side}: {joke}" for side, joke in zip(sides, jokes))}
+        if solution:
+            data["alt"] += f" Proposed solution from The Daily Baker: {solution}"
         raw = json.dumps(data, ensure_ascii=False, sort_keys=True)
-        identifier = sha256(f"{date.today()}:{index}:{raw}".encode()).hexdigest()[:16]
+        identifier = sha256(f"{date.today()}:credits-v1:{index}:{raw}".encode()).hexdigest()[:16]
         if db.execute("SELECT 1 FROM drafts WHERE id = ?", (identifier,)).fetchone():
             continue
-        render(name, sides, jokes, index, state / f"{identifier}.png")
+        render(name, sides, jokes, index, state / f"{identifier}.png", sources, solution)
         db.execute("INSERT INTO drafts VALUES (?, 'pending', ?)", (identifier, raw))
         print(f"Pending: {identifier}")
 
@@ -201,11 +247,21 @@ def main():
                 parser.exit(1, "Select an approved draft to export.\n")
             if json.loads(row[0])["demo"]:
                 parser.exit(1, "Demo drafts are for review only.\n")
+            data = json.loads(row[0])
+            citations = [
+                f'{source.get("channel", source["publisher"])} — {source["title"]}\n{source["url"]}'
+                for source in data["sources"]
+            ]
+            post_copy = data["caption"]
+            if data.get("solution"):
+                post_copy += f'\n\nProposed solution from The Daily Baker\n{data["solution"]}'
+            post_copy += "\n\nSource coverage\n" + "\n\n".join(citations) + "\n"
             import zipfile
             target = ROOT / f"post-{args.id}.zip"
             with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as archive:
                 archive.write(state / f"{args.id}.png", "meme.png")
                 archive.writestr("post.json", row[0])
+                archive.writestr("caption.txt", post_copy)
             print(target)
         dashboard(db, state)
     print(state / "review.html")
